@@ -24,59 +24,70 @@ Some exceptions are if the registrant is in a board position for the club as the
 
 ```mermaid
 flowchart TD
-T1["T1: Receive registration"] --> T2["T2: Capture permitted details"]
-T2 --> D1{"D1: Was registration canceled?"}
 
-D1 -->|Yes| C2([C2: Exclude canceled registration])
-D1 -->|No| T3["T3: Validate eligibility record"]
+subgraph TR1["Trigger 1: New registration"]
+  T1["T1: Receive registration"] --> T2["T2: Capture permitted details"]
+end
 
-T3 --> D2{"D2: Is eligibility verifiable?"}
-D2 -->|Yes| T4["T4: Check prior engagement"]
-D2 -->|No| H1["H1: Review eligibility record"]
+subgraph TR2["Trigger 2: Registration update or cancellation"]
+  T20["T20: Receive change request"] --> D20{"D20: Is this a cancellation?"}
+  D20 -->|Yes| T21["T21: Mark registration excluded"]
+  T21 --> C4([C4: Registration record updated])
+  D20 -->|No| T22["T22: Apply updated answers"]
+end
 
-H1 --> D3{"D3: Can reviewer verify eligibility?"}
-D3 -->|Yes| T4
-D3 -->|No| C3([C3: Hold registration from forecast])
+subgraph SCORE["Shared scoring path"]
+  T3["T3: Validate student eligibility"] --> D2{"D2: Is eligibility verifiable?"}
+  D2 -->|No| H1["H1: Review eligibility record"]
+  H1 --> D3{"D3: Can reviewer verify student status?"}
+  D3 -->|No| C3([C3: Hold registration from forecast])
+  D2 -->|Yes| T4["T4: Check prior club engagement"]
+  D3 -->|Yes| T4
 
-T4 --> D4{"D4: Is prior engagement available?"}
-D4 -->|Yes| T5["T5: Apply engagement signal"]
-D4 -->|No| T6["T6: Apply neutral engagement signal"]
+  T4 --> D4{"D4: Is prior engagement available?"}
+  D4 -->|Yes| T5["T5: Apply engagement signal"]
+  D4 -->|No| T6["T6: Apply neutral engagement signal"]
 
-T5 --> D5{"D5: Is registrant a board member?"}
-T6 --> D5
+  T5 --> D5{"D5: Is registrant a board member?"}
+  T6 --> D5
+  D5 -->|Yes| T7["T7: Apply board-membership signal"]
+  D5 -->|No| T23["T23: Apply non-board signal"]
 
-D5 -->|Yes| T7["T7: Apply board-attendance signal"]
-D5 -->|No| T8["T8: Score registration reason"]
+  T7 --> T8["T8: Score registration reason"]
+  T23 --> T8
+  T8 --> D6{"D6: Is reason relevant and clear?"}
+  D6 -->|Yes| T9["T9: Score AI comfort response"]
+  D6 -->|No| H2["H2: Review registration reason"]
+  H2 --> D7{"D7: Can reviewer assess intent?"}
+  D7 -->|Yes| T10["T10: Assign reviewed reason signal"]
+  D7 -->|No| T11["T11: Assign neutral reason signal"]
+  T10 --> T9
+  T11 --> T9
 
-T8 --> D6{"D6: Is reason relevant and clear?"}
-D6 -->|Yes| T9["T9: Score AI understanding"]
-D6 -->|No| H2["H2: Review registration reason"]
+  T9 --> T12["T12: Calculate attendance probability"]
+  T12 --> T24["T24: Store probability on registration record"]
+  T24 --> C1([C1: Registration processed])
+end
 
-H2 --> D7{"D7: Can reviewer assess intent?"}
-D7 -->|Yes| T10["T10: Assign reviewed reason signal"]
-D7 -->|No| T11["T11: Assign neutral reason signal"]
+T2 --> T3
+T22 --> T3
 
-T10 --> T9
-T11 --> T9
-T7 --> T12["T12: Calculate attendance probability"]
-T9 --> T12
+subgraph TR3["Trigger 3: Attendance forecasting"]
+  T30["T30: Organizer starts forecast run"] --> T31["T31: Read active registration records"]
+  T31 --> D30{"D30: Any uncertain probabilities?"}
+  D30 -->|No| T16["T16: Aggregate privacy-safe forecast"]
+  D30 -->|Yes| T13["T13: Send one voluntary confirmation request"]
 
-T12 --> D8{"D8: Is probability uncertain?"}
-D8 -->|No| T16["T16: Aggregate privacy-safe forecast"]
-D8 -->|Yes| T13["T13: Send one voluntary confirmation request"]
+  T13 --> S1{{"S1: Awaiting confirmation"}}
+  S1 -->|Response received| T15["T15: Update attendance probability"]
+  S1 -->|Cutoff reached| T17["T17: Keep prior probability"]
 
-T13 --> T14["T14: Wait for response"]
-T14 --> D9{"D9: Has response arrived?"}
+  T15 --> D31{"D31: All pending confirmations resolved?"}
+  T17 --> D31
+  D31 -->|No| S1
+  D31 -->|Yes| T16
 
-D9 -->|Yes| T15["T15: Update attendance probability"]
-D9 -->|No| D10{"D10: Has confirmation cutoff passed?"}
-
-D10 -->|No| T14
-D10 -->|Yes| T17["T17: Keep prior probability"]
-
-T15 --> T16
-T17 --> T16
-
-T16 --> T18["T18: Recommend supplies and swag"]
-T18 --> C1([C1: Forecast completed])
+  T16 --> T18["T18: Recommend supplies and swag"]
+  T18 --> C2([C2: Event forecast complete])
+end
 ```
