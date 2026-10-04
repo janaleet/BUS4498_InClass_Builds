@@ -25,69 +25,73 @@ Some exceptions are if the registrant is in a board position for the club as the
 ```mermaid
 flowchart TD
 
-subgraph TR1["Trigger 1: New registration"]
-  T1["T1: Receive registration"] --> T2["T2: Capture permitted details"]
+classDef default fill:#ffffff,stroke:#333333,stroke-width:1px,color:#000000
+classDef decision fill:#e6e6e6,stroke:#333333,stroke-width:1px,color:#000000
+classDef popup fill:#f2f2f2,stroke:#000000,stroke-width:2px,color:#000000
+classDef endpoint fill:#333333,stroke:#000000,stroke-width:1px,color:#ffffff
+
+subgraph AUTH["Sign in and account creation"]
+  T1["T1: Open sign in page"] --> D1{"D1: Does user have an account?"}
+  D1 -->|Yes| T2["T2: Enter email / username and password"]
+  D1 -->|No| T3["T3: Click 'Create an account'"]
+
+  T3 --> T4["T4: Open sign up page"]
+  T4 --> T5["T5: Enter account information"]
+  T5 --> D2{"D2: Is sign up information valid?"}
+  D2 -->|No| T6["T6: Show sign up errors"]
+  T6 --> T5
+  D2 -->|Yes| T7["T7: Create account"]
+  T7 --> T1
+
+  T2 --> D3{"D3: Are credentials valid?"}
+  D3 -->|No| T8["T8: Show sign in error"]
+  T8 --> T2
 end
 
-subgraph TR2["Trigger 2: Registration update or cancellation"]
+subgraph REG["Hackathon registration"]
+  T9["T9: Open hackathon registration page"] --> P1[["P1: Pop-up: Would you like to register?"]]
+  P1 -->|No| C1([C1: User not registered])
+  P1 -->|Yes| T10["T10: Show registration survey"]
+
+  T10 --> T11["T11: Answer AI comfortability level"]
+  T11 --> T12["T12: Answer why they want to join"]
+  T12 --> D4{"D4: Does user already have a team?"}
+
+  D4 -->|Yes| P2[["P2: Pop-up: Enter teammate emails"]]
+  P2 --> T13["T13: Send email asking teammates to register"]
+
+  D4 -->|No| D5{"D5: Opt into personalized team recommendation?"}
+  D5 -->|Yes| T14["T14: Queue team recommendation to send later"]
+  D5 -->|No| T15["T15: Submit registration"]
+
+  T13 --> T15
+  T14 --> T15
+end
+
+subgraph PROC["Registration processing"]
+  T16["T16: Capture permitted details"] --> T18["T18: Store registration record"]
+  T18 --> C2([C2: User registered for hackathon])
+end
+
+subgraph UPD["Registration update or cancellation"]
   T20["T20: Receive change request"] --> D20{"D20: Is this a cancellation?"}
-  D20 -->|Yes| T21["T21: Mark registration excluded"]
+  D20 -->|Yes| T21["T21: Mark registration cancelled"]
   T21 --> C4([C4: Registration record updated])
   D20 -->|No| T22["T22: Apply updated answers"]
 end
 
-subgraph SCORE["Shared scoring path"]
-  T3["T3: Validate student eligibility"] --> D2{"D2: Is eligibility verifiable?"}
-  D2 -->|No| H1["H1: Review eligibility record"]
-  H1 --> D3{"D3: Can reviewer verify student status?"}
-  D3 -->|No| C3([C3: Hold registration from forecast])
-  D2 -->|Yes| T4["T4: Check prior club engagement"]
-  D3 -->|Yes| T4
+D3 -->|Yes| T9
+T15 --> T16
+T22 --> T18
 
-  T4 --> D4{"D4: Is prior engagement available?"}
-  D4 -->|Yes| T5["T5: Apply engagement signal"]
-  D4 -->|No| T6["T6: Apply neutral engagement signal"]
+class D1,D2,D3,D4,D5,D20 decision
+class P1,P2 popup
+class C1,C2,C4 endpoint
 
-  T5 --> D5{"D5: Is registrant a board member?"}
-  T6 --> D5
-  D5 -->|Yes| T7["T7: Apply board-membership signal"]
-  D5 -->|No| T23["T23: Apply non-board signal"]
-
-  T7 --> T8["T8: Score registration reason"]
-  T23 --> T8
-  T8 --> D6{"D6: Is reason relevant and clear?"}
-  D6 -->|Yes| T9["T9: Score AI comfort response"]
-  D6 -->|No| H2["H2: Review registration reason"]
-  H2 --> D7{"D7: Can reviewer assess intent?"}
-  D7 -->|Yes| T10["T10: Assign reviewed reason signal"]
-  D7 -->|No| T11["T11: Assign neutral reason signal"]
-  T10 --> T9
-  T11 --> T9
-
-  T9 --> T12["T12: Calculate attendance probability"]
-  T12 --> T24["T24: Store probability on registration record"]
-  T24 --> C1([C1: Registration processed])
-end
-
-T2 --> T3
-T22 --> T3
-
-subgraph TR3["Trigger 3: Attendance forecasting"]
-  T30["T30: Organizer starts forecast run"] --> T31["T31: Read active registration records"]
-  T31 --> D30{"D30: Any uncertain probabilities?"}
-  D30 -->|No| T16["T16: Aggregate privacy-safe forecast"]
-  D30 -->|Yes| T13["T13: Send one voluntary confirmation request"]
-
-  T13 --> S1{{"S1: Awaiting confirmation"}}
-  S1 -->|Response received| T15["T15: Update attendance probability"]
-  S1 -->|Cutoff reached| T17["T17: Keep prior probability"]
-
-  T15 --> D31{"D31: All pending confirmations resolved?"}
-  T17 --> D31
-  D31 -->|No| S1
-  D31 -->|Yes| T16
-
-  T16 --> T18["T18: Recommend supplies and swag"]
-  T18 --> C2([C2: Event forecast complete])
-end
+style AUTH fill:#fafafa,stroke:#666666,color:#000000
+style REG fill:#fafafa,stroke:#666666,color:#000000
+style PROC fill:#fafafa,stroke:#666666,color:#000000
+style UPD fill:#fafafa,stroke:#666666,color:#000000
 ```
+
+Tasks are white, decisions are light gray, pop-ups are light gray with a heavier black border so they stand out, and end states are dark gray with white text. I left the IDs as they were (skipping T17 and H1) so they still match your earlier version, but I can renumber them sequentially if you'd prefer.
