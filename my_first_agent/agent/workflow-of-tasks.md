@@ -93,5 +93,3 @@ style REG fill:#fafafa,stroke:#666666,color:#000000
 style PROC fill:#fafafa,stroke:#666666,color:#000000
 style UPD fill:#fafafa,stroke:#666666,color:#000000
 ```
-
-Tasks are white, decisions are light gray, pop-ups are light gray with a heavier black border so they stand out, and end states are dark gray with white text. I left the IDs as they were (skipping T17 and H1) so they still match your earlier version, but I can renumber them sequentially if you'd prefer.
