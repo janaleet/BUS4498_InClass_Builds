@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Club Event Radar</title>
+<meta name="description" content="Campus club events, checked by an AI agent and posted in one place.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <p class="kicker">BUS 4498 · Campus clubs</p>
+    <h1>Club Event Radar</h1>
+    <p class="lede">Every club event in one place. Paste your announcement and an AI agent turns it into a clean event card, checks the posting rules, and catches duplicates.</p>
+    <ul class="badges">
+      <li>✨ AI-checked posts</li>
+      <li>🛡️ Moderator review</li>
+      <li>🍕 Free food filter</li>
+    </ul>
+  </div>
+</header>
+
+<main class="wrap layout">
+  <section class="card post">
+    <h2>Post an event</h2>
+    <form id="post-form">
+      <label for="announcement">Your announcement
+        <span class="hint">Paste it the way you'd post it in a group chat. Include the date, start time, and place.</span>
+      </label>
+      <textarea id="announcement" name="announcement" maxlength="2000" required
+        placeholder="Board Game Guild: Game Night! Thursday, 7 to 10 pm in the UU, Room 220…"></textarea>
+      <button type="submit" id="post-button">Send to the agent</button>
+    </form>
+    <div id="result" hidden></div>
+  </section>
+
+  <section class="board-section">
+    <div class="board-head">
+      <h2>Upcoming events</h2>
+      <button type="button" class="ghost" id="refresh">Refresh</button>
+    </div>
+    <div class="filters">
+      <button type="button" class="chip" data-filter="all" aria-pressed="true">All events</button>
+      <button type="button" class="chip" data-filter="food" aria-pressed="false">🍕 Free food</button>
+    </div>
+    <ul class="board" id="board">
+      <li class="empty">Loading events…</li>
+    </ul>
+  </section>
+</main>
+
+<footer class="wrap foot">
+  <p>Club Event Radar, a BUS 4498 practice build. Posts are read by an AI agent and some wait for a moderator before they appear.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
