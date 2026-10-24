@@ -79,20 +79,36 @@
   }
 
   /* ---------- the event list: published events only ---------- */
+  var events = [];        // the last list loaded from the database
+  var foodOnly = false;   // the "Free food only" button
+  function renderBoard() {
+    var list = $("board");
+    var shown = foodOnly ? events.filter(function (ev) { return ev.free_food; }) : events;
+    list.textContent = "";
+    shown.forEach(function (ev) { list.appendChild(card(ev)); });
+    if (!shown.length) {
+      list.appendChild(el("li", "empty", foodOnly && events.length ? "No events with free food right now." : "No events yet. Post the first one!"));
+    }
+    $("boardStatus").textContent = shown.length
+      ? shown.length + (shown.length === 1 ? " event" : " events") + (foodOnly ? " with free food" : "")
+      : "";
+  }
   function loadBoard() {
     $("boardStatus").textContent = "Loading…";
     db.from("events").select(PUBLIC_COLUMNS).eq("status", "published")
       .order("event_date", { ascending: true, nullsFirst: false })
       .order("start_time", { ascending: true, nullsFirst: false })
       .then(function (res) {
-        var list = $("board");
-        list.textContent = "";
-        if (res.error) { $("boardStatus").textContent = "Couldn't load events: " + res.error.message; return; }
-        res.data.forEach(function (ev) { list.appendChild(card(ev)); });
-        if (!res.data.length) list.appendChild(el("li", "empty", "No events yet. Post the first one!"));
-        $("boardStatus").textContent = res.data.length ? res.data.length + (res.data.length === 1 ? " event" : " events") : "";
+        if (res.error) { $("board").textContent = ""; $("boardStatus").textContent = "Couldn't load events: " + res.error.message; return; }
+        events = res.data;
+        renderBoard();
       });
   }
+  $("foodFilter").addEventListener("click", function () {
+    foodOnly = !foodOnly;
+    this.setAttribute("aria-pressed", String(foodOnly));
+    renderBoard();
+  });
 
   /* ---------- posting: send it to the AI agent ---------- */
   var LABELS = { published: "Published", waiting: "Waiting for a moderator", rejected: "Not posted", duplicate: "Already posted", error: "Something went wrong" };
