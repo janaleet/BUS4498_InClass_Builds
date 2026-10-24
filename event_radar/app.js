@@ -223,5 +223,127 @@
 
   refreshButton.addEventListener("click", loadEvents);
 
+  // ---------- moderators ----------
+  // Signed-in moderators can read every post and change only its review columns (see the Stage 8 migration).
+
+  const signInForm = document.getElementById("sign-in-form");
+  const signInButton = document.getElementById("sign-in-button");
+  const signInResult = document.getElementById("sign-in-result");
+  const modPanel = document.getElementById("mod-panel");
+  const modWho = document.getElementById("mod-who");
+  const waitingBoard = document.getElementById("waiting-board");
+  const signOutButton = document.getElementById("sign-out");
+
+  let moderator = null;
+
+  function reviewCard(event) {
+    const item = eventCard(event);
+    const review = el("div", "review");
+    review.append(el("p", "why", event.status_reason || "Waiting for a moderator."));
+    if (event.note_for_moderator) review.append(el("p", "why", "Note: " + event.note_for_moderator));
+    review.append(el("p", "original", event.announcement));
+
+    const actions = el("p", "actions");
+    const approve = el("button", null, "Approve");
+    approve.type = "button";
+    const reject = el("button", "ghost", "Reject");
+    reject.type = "button";
+    approve.addEventListener("click", () => reviewPost(event.id, "published", [approve, reject]));
+    reject.addEventListener("click", () => reviewPost(event.id, "rejected", [approve, reject]));
+    actions.append(approve, reject);
+    review.append(actions);
+
+    item.querySelector(".event-body").append(review);
+    return item;
+  }
+
+  async function loadWaiting() {
+    const { data, error } = await db
+      .from("events")
+      .select("*")
+      .eq("status", "waiting")
+      .order("created_at", { ascending: true });
+
+    waitingBoard.replaceChildren();
+    if (error) {
+      console.error(error);
+      waitingBoard.append(el("li", "empty", "Couldn't load waiting posts. Please try again."));
+      return;
+    }
+    if (data.length === 0) {
+      waitingBoard.append(el("li", "empty", "Nothing is waiting. Nice work!"));
+      return;
+    }
+    data.forEach((event) => waitingBoard.append(reviewCard(event)));
+  }
+
+  async function reviewPost(id, status, buttons) {
+    buttons.forEach((button) => (button.disabled = true));
+    const { data, error } = await db
+      .from("events")
+      .update({ status, reviewed_at: new Date().toISOString(), reviewed_by: moderator.email || "" })
+      .eq("id", id)
+      .select("id");
+
+    if (error || !data || data.length === 0) {
+      console.error(error);
+      buttons.forEach((button) => (button.disabled = false));
+      alert("That didn't save. Please sign in again and retry.");
+      return;
+    }
+    loadWaiting();
+    if (status === "published") loadEvents();
+  }
+
+  function showSignedIn(user) {
+    moderator = user;
+    if (user) {
+      signInForm.hidden = true;
+      modPanel.hidden = false;
+      modWho.textContent = "Signed in as " + (user.email || "a moderator");
+      loadWaiting();
+    } else {
+      signInForm.hidden = false;
+      modPanel.hidden = true;
+      waitingBoard.replaceChildren();
+    }
+  }
+
+  signInForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    signInButton.disabled = true;
+    signInResult.hidden = true;
+    const { data, error } = await db.auth.signInWithPassword({
+      email: document.getElementById("mod-email").value.trim(),
+      password: document.getElementById("mod-password").value,
+    });
+    signInButton.disabled = false;
+    document.getElementById("mod-password").value = "";
+
+    if (error) {
+      signInResult.className = "result error";
+      signInResult.replaceChildren(
+        el("p", "result-label", "Couldn't sign in"),
+        el("p", null, "Check the email and password and try again."),
+      );
+      signInResult.hidden = false;
+      return;
+    }
+    showSignedIn(data.user);
+  });
+
+  signOutButton.addEventListener("click", async () => {
+    await db.auth.signOut();
+    showSignedIn(null);
+  });
+
+  // Stay signed in after a page reload.
+  db.auth.getSession().then(({ data }) => {
+    if (data.session) {
+      document.getElementById("mod").open = true;
+      showSignedIn(data.session.user);
+    }
+  });
+
   loadEvents();
 })();
