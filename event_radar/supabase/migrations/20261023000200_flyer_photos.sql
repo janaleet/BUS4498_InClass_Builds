@@ -1,14 +1,13 @@
--- Stage 7: flyer photos.
--- Each post can have one flyer photo. Only the AI agent uploads photos; the website just shows them.
+-- Stage 7: photo uploads (Supabase Storage).
+-- The AI agent saves each flyer photo in a public "flyers" bucket and puts its link on the event card.
+-- Photo names are random IDs, and a photo's link only appears on the website after a moderator approves the post.
 
-alter table public.events
-  add column flyer_url text not null default '';
+alter table public.events add column if not exists flyer_url text not null default '';
 
--- Visitors may read the photo link along with the other public columns.
-grant select (flyer_url) on table public.events to anon, authenticated;
+-- Let the website read the photo link.
+grant select (flyer_url) on public.events to anon, authenticated;
 
--- A public storage bucket for flyers: anyone can view a photo by its link, nobody else can upload.
--- No storage policies are added, so the website can't upload, change, or delete files.
+-- The storage bucket: images only, 5 MB at most. Only the AI agent (with the secret key) can add photos.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('flyers', 'flyers', true, 5242880, array['image/jpeg', 'image/png'])
 on conflict (id) do update
